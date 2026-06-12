@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import quote
 import undetected_chromedriver as uc
+import time
 
 class ScrapeReviews:
     def __init__(self, product_name: str, no_of_products: int, sort_by: str = ""):
@@ -43,7 +44,15 @@ class ScrapeReviews:
             else:
                 base_url = f"https://www.myntra.com/{search_string}?rawQuery={encoded_query}"
                 
-            self.driver.get(base_url)
+            self.driver.get(url)
+            time.sleep(5) 
+            
+            try:
+                self.driver.save_screenshot("debug_bot_block.png")
+                st.error("Scraper failed to find products. Here is what the bot actually sees:")
+                st.image("debug_bot_block.png")
+            except Exception as e:
+                print(f"Could not take screenshot: {e}")
 
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "results-base"))
