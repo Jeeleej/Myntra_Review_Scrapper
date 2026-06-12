@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium_stealth import stealth
@@ -13,7 +14,7 @@ import time
 
 
 class CustomException(Exception):
-    def __init__(self, error_message, error_detail: sys):
+    def __init__(self, error_message, error_detail=None):
         super().__init__(str(error_message))
         self.error_message = str(error_message)
 
@@ -39,8 +40,10 @@ class ScrapeReviews:
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
+        options.binary_location = "/usr/bin/chromium"
 
-        self.driver = webdriver.Chrome(options=options)
+        service = Service("/usr/bin/chromedriver")
+        self.driver = webdriver.Chrome(service=service, options=options)
 
         stealth(
             self.driver,
@@ -162,15 +165,6 @@ class ScrapeReviews:
             global_counts = {"5": "0", "4": "0", "3": "0", "2": "0", "1": "0"}
             try:
                 count_nodes = review_html.find_all(class_=re.compile("countNode", re.IGNORECASE))
-                if not count_nodes or len(count_nodes) < 5:
-                    rows = review_html.find_all("div", class_=re.compile("ratingBarProgress|flexRow", re.IGNORECASE))
-                    if rows:
-                        count_nodes = []
-                        for row in rows:
-                            texts = list(row.stripped_strings)
-                            if texts and texts[0] in ["5", "4", "3", "2", "1"] and texts[-1].isdigit():
-                                count_nodes.append(texts[-1])
-
                 if count_nodes and len(count_nodes) >= 5:
                     def get_text(node): return node.text.strip() if hasattr(node, 'text') else str(node)
                     global_counts["5"] = get_text(count_nodes[0])
@@ -252,15 +246,11 @@ class ScrapeReviews:
                 elif is_negative:
                     neg_count += 1
 
-            review_data = pd.DataFrame(
-                reviews,
-                columns=[
-                    "Product Name", "Over_All_Rating", "Price",
-                    "Date", "Rating", "Name", "Comment",
-                    "Total_5_Star", "Total_4_Star", "Total_3_Star", "Total_2_Star", "Total_1_Star"
-                ],
-            )
-            return review_data
+            return pd.DataFrame(reviews, columns=[
+                "Product Name", "Over_All_Rating", "Price",
+                "Date", "Rating", "Name", "Comment",
+                "Total_5_Star", "Total_4_Star", "Total_3_Star", "Total_2_Star", "Total_1_Star"
+            ])
 
         except Exception as e:
             print(f"--- DEBUG: Error extracting products: {e} ---")
@@ -268,10 +258,7 @@ class ScrapeReviews:
 
     def get_review_data(self) -> pd.DataFrame:
         try:
-            product_urls = self.scrape_product_urls(product_name=self.product_name)
-            if not product_urls:
-                product_urls = []
-
+            product_urls = self.scrape_product_urls(product_name=self.product_name) or []
             print(f"--- DEBUG: Found {len(product_urls)} product URLs on search page ---")
 
             if not product_urls:
@@ -282,20 +269,13 @@ class ScrapeReviews:
             for url in product_urls:
                 if len(product_details) >= self.no_of_products:
                     break
-
                 print(f"--- DEBUG: Checking product: {url} ---")
                 review = self.extract_reviews(url)
-
                 if review:
-                    print("--- DEBUG: Reviews found! Extracting comments... ---")
                     product_detail = self.extract_products(review)
                     if not product_detail.empty:
                         product_details.append(product_detail)
-                        print(f"--- DEBUG: Success! Collected {len(product_details)} / {self.no_of_products} products ---")
-                    else:
-                        print("--- DEBUG: Product skipped (Not enough matching reviews). ---")
-                else:
-                    print("--- DEBUG: Skipped (No reviews). Moving to next product. ---")
+                        print(f"--- DEBUG: Collected {len(product_details)} / {self.no_of_products} ---")
 
             self.driver.quit()
 
@@ -306,8 +286,7 @@ class ScrapeReviews:
                 data.insert(0, 'Product Index', data['Product Name'].map(index_mapping))
                 data.to_csv("data.csv", index=False)
                 return data
-            else:
-                return pd.DataFrame()
+            return pd.DataFrame()
 
         except Exception as e:
             try:
