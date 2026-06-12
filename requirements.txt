@@ -10,3 +10,4 @@ streamlit
 tiktoken
 certifi
 webdriver-manager
+undetected-chromedriver
