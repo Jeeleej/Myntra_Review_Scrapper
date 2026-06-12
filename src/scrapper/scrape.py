@@ -15,8 +15,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import quote
 
 import setuptools
-sys.modules['distutils'] = setuptools._distutils
-sys.modules['distutils.version'] = setuptools._distutils.version
+
+try:
+    if not sys.modules.get('distutils'):
+        sys.modules['distutils'] = setuptools._distutils
+    if not sys.modules.get('distutils.version') and hasattr(setuptools._distutils, 'version'):
+        sys.modules['distutils.version'] = setuptools._distutils.version
+except AttributeError:
+    pass
 
 import undetected_chromedriver as uc
 import time
