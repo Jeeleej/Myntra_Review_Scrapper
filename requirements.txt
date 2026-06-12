@@ -1,13 +1,12 @@
 pandas
 numpy
-bs4
-chromedriver-binary
-pymongo    
-gunicorn
+beautifulsoup4
+pymongo
 plotly
 pysocks
 python-dotenv
-selenium
+selenium>=4.20.0
 streamlit
 tiktoken
 certifi
+webdriver-manager
