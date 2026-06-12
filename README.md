@@ -1,6 +1,16 @@
-# 🛍️ Myntra Review Scrapper
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Selenium-43B02A?style=for-the-badge&logo=selenium&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white"/>
+  <img src="https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white"/>
+</p>
 
-A web scraping tool built with **Python** and **Streamlit** that lets you search Myntra products, scrape customer reviews, and explore interactive analytics — all from a clean browser-based UI.
+<h1 align="center">🛍️ Myntra Review Scrapper</h1>
+
+<p align="center">
+  A web scraping tool built with <strong>Python</strong> and <strong>Streamlit</strong> that lets you search Myntra products, scrape customer reviews, and explore interactive analytics — all from a clean browser-based UI.
+</p>
 
 ---
 
@@ -20,12 +30,44 @@ A web scraping tool built with **Python** and **Streamlit** that lets you search
 
 ---
 
+## ⚙️ How It Works
+
+```
+Input: Search Query (e.g. "Genz Tshirts for man")
+    │
+    ▼
+Selenium Browser Automation   ← Launches Chrome & searches Myntra
+    │
+    ▼
+Product Listing Scrape        ← Collects product URLs from search results
+    │
+    ▼
+Per-Product Review Scrape     ← Opens each product page, extracts reviews
+    │  (BeautifulSoup4 parsing)
+    ▼
+Data Aggregation              ← Merges ratings, prices, reviewer info
+    │
+    ▼
+Streamlit Dashboard           ← Displays reviews + interactive Plotly charts
+    │
+    ▼
+Output: Review Sub-lists, Global Ratings, Executive Summary, Charts
+```
+
+**Key steps explained:**
+
+- **Selenium** automates Chrome to browse Myntra, handle dynamic content, and paginate results
+- **BeautifulSoup4** parses the raw HTML to extract ratings, prices, reviewer names, and text
+- **Pandas / NumPy** aggregate and clean the collected data
+- **Plotly** renders interactive charts in the Streamlit UI
+- **MongoDB** (optional) can be used to persist scraped data across sessions
+
+---
+
 ## 🖼️ Screenshots
 
 ### Scraper UI
 Search for products, set quantity, and choose sort order before scraping.
-
-![Scraper UI](https://github.com/Jeeleej/Myntra_Review_Scrapper/raw/main/screenshots/scraper.png)
 
 ### Review Data
 View per-product review sub-lists with ratings, dates, and reviewer names.
@@ -103,10 +145,10 @@ The app will open in your browser at `http://localhost:8501`.
 
 ```
 Myntra_Review_Scrapper/
-├── app.py                  # Main Streamlit app (scraper UI)
+├── app.py                      # Main Streamlit app (scraper UI)
 ├── pages/
-│   └── generate_analysis.py  # Analytics dashboard page
-├── src/                    # Core scraping logic
+│   └── generate_analysis.py    # Analytics dashboard page
+├── src/                        # Core scraping logic
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -152,4 +194,4 @@ This project is open source. Feel free to fork and build on it.
 
 ---
 
-*Made with ❤️ by [Jeeleej](https://github.com/Jeeleej)*
+<p align="center">Made with ❤️ by <a href="https://github.com/Jeeleej">Jeeleej</a></p>
