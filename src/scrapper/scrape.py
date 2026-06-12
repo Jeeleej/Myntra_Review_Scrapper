@@ -38,12 +38,20 @@ class ScrapeReviews:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-infobars")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
-        options.binary_location = "/usr/bin/chromium"
 
-        service = Service("/usr/bin/chromedriver")
-        self.driver = webdriver.Chrome(service=service, options=options)
+        # Use system-installed Chromium (installed via packages.txt on Streamlit Cloud)
+        try:
+            options.binary_location = "/usr/bin/chromium"
+            service = Service("/usr/bin/chromedriver")
+            self.driver = webdriver.Chrome(service=service, options=options)
+        except Exception:
+            # Fallback: let Selenium find Chrome automatically
+            self.driver = webdriver.Chrome(options=options)
 
         stealth(
             self.driver,
@@ -57,38 +65,53 @@ class ScrapeReviews:
 
     def scrape_product_urls(self, product_name):
         try:
-            search_string = product_name.replace(" ", "-")
-            encoded_query = quote(search_string)
+            encoded_query = quote(product_name)
 
-            if self.sort_by:
-                base_url = f"https://www.myntra.com/{search_string}?rawQuery={encoded_query}&sort={self.sort_by}"
+            # Build Ajio search URL with optional sort
+            sort_map = {
+                "new":        "freshness",
+                "popularity": "popularity",
+                "discount":   "discount",
+                "price_desc": "price-desc",
+                "price_asc":  "price-asc",
+                "rating":     "rating",
+            }
+            sort_param = sort_map.get(self.sort_by, "")
+
+            if sort_param:
+                base_url = f"https://www.ajio.com/search/?text={encoded_query}&sort={sort_param}"
             else:
-                base_url = f"https://www.myntra.com/{search_string}?rawQuery={encoded_query}"
+                base_url = f"https://www.ajio.com/search/?text={encoded_query}"
 
+            print(f"--- DEBUG: Loading URL: {base_url} ---")
             self.driver.get(base_url)
-            time.sleep(5)
+            time.sleep(6)
 
+            # Wait for product grid
             try:
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "results-base"))
+                WebDriverWait(self.driver, 12).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "rilrtl-products-list"))
                 )
             except Exception:
-                print("--- DEBUG: Timed out waiting for results-base ---")
+                print("--- DEBUG: Timed out waiting for rilrtl-products-list ---")
 
-            myntra_text = self.driver.page_source
-            print(f"--- DEBUG: Scraped HTML Length: {len(myntra_text)} ---")
+            page_html = self.driver.page_source
+            print(f"--- DEBUG: Page HTML length: {len(page_html)} ---")
 
-            myntra_html = bs(myntra_text, "html.parser")
-            pclass = myntra_html.findAll("ul", {"class": "results-base"})
-            print(f"--- DEBUG: Found 'results-base' grid: {len(pclass) > 0} ---")
+            soup = bs(page_html, "html.parser")
+
+            # Ajio product cards
+            product_cards = soup.find_all("div", {"class": re.compile(r"rilrtl-products-list__item", re.IGNORECASE)})
+            print(f"--- DEBUG: Found {len(product_cards)} product cards ---")
 
             product_urls = []
-            if pclass:
-                for i in pclass:
-                    href = i.findAll("a", href=True)
-                    for product_no in range(len(href)):
-                        t = href[product_no]["href"]
-                        product_urls.append(t)
+            for card in product_cards:
+                link = card.find("a", href=True)
+                if link:
+                    href = link["href"]
+                    if not href.startswith("http"):
+                        href = urljoin("https://www.ajio.com", href)
+                    product_urls.append(href)
 
             return product_urls
 
@@ -98,107 +121,120 @@ class ScrapeReviews:
 
     def extract_reviews(self, product_link):
         try:
-            productLink = urljoin("https://www.myntra.com/", product_link)
-            self.driver.get(productLink)
-            time.sleep(3.5)
+            self.driver.get(product_link)
+            time.sleep(4)
 
-            prodRes = self.driver.page_source
-            prodRes_html = bs(prodRes, "html.parser")
+            page_html = self.driver.page_source
+            soup = bs(page_html, "html.parser")
 
-            title_elem = prodRes_html.find("title")
+            # Product title
+            title_elem = (
+                soup.find("h1", {"class": re.compile(r"title|name|product", re.IGNORECASE)})
+                or soup.find("title")
+            )
             if title_elem:
-                raw_title = title_elem.text.strip()
-                self.product_title = raw_title.replace(" | Myntra", "").replace("| Myntra", "").strip()
+                self.product_title = title_elem.get_text(strip=True).replace(" | Ajio", "").replace("| AJIO", "").strip()
             else:
                 self.product_title = "Unknown Product"
 
+            # Overall rating
             self.product_rating_value = "0"
+            rating_elem = soup.find(attrs={"class": re.compile(r"rating.*count|overall.*rating|prod-rating", re.IGNORECASE)})
+            if not rating_elem:
+                rating_elem = soup.find("span", {"class": re.compile(r"rating", re.IGNORECASE)})
+            if rating_elem:
+                text = rating_elem.get_text(strip=True)
+                match = re.search(r"(\d+\.?\d*)", text)
+                if match:
+                    self.product_rating_value = match.group(1)
+
+            # Price
             self.product_price = "0"
-
-            overallRating = prodRes_html.find("div", {"class": "index-overallRating"})
-            if overallRating and overallRating.find("div"):
-                self.product_rating_value = overallRating.find("div").text.strip()
-
-            price_elem = prodRes_html.find("span", {"class": "pdp-price"})
+            price_elem = soup.find(attrs={"class": re.compile(r"price|cost|amount", re.IGNORECASE)})
             if price_elem:
-                self.product_price = price_elem.text.strip()
+                self.product_price = price_elem.get_text(strip=True)
 
-            product_reviews = prodRes_html.find("a", {"class": "detailed-reviews-allReviews"})
-            if not product_reviews:
-                return None
+            # Check if reviews section exists — look for review/rating link or section
+            review_link = (
+                soup.find("a", {"class": re.compile(r"review|rating", re.IGNORECASE)})
+                or soup.find("div", {"class": re.compile(r"review.*section|ratings.*review", re.IGNORECASE)})
+                or soup.find("a", href=re.compile(r"review", re.IGNORECASE))
+            )
 
-            return product_reviews
+            # Even if no explicit link, return the product_link to extract reviews from same page
+            return product_link
 
         except Exception as e:
             print(f"--- DEBUG: Error in extract_reviews: {e} ---")
             return None
 
     def scroll_to_load_reviews(self):
-        self.driver.set_window_size(1920, 1080)
         last_height = self.driver.execute_script("return document.body.scrollHeight")
         while True:
-            self.driver.execute_script("window.scrollBy(0, 1000);")
-            time.sleep(3)
+            self.driver.execute_script("window.scrollBy(0, 800);")
+            time.sleep(2)
             new_height = self.driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
             last_height = new_height
 
-    def extract_products(self, product_reviews):
+    def extract_products(self, product_link):
         try:
-            t2 = product_reviews["href"]
-            review_link = urljoin("https://www.myntra.com/", t2)
-            self.driver.get(review_link)
-
-            try:
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Verified Buyers') or contains(text(), 'Customer Reviews')]"))
-                )
-            except Exception:
-                print("--- DEBUG: Timed out waiting for Verified Buyers text ---")
-
+            # On Ajio, reviews are on the same product page — scroll to load them
+            self.driver.get(product_link)
+            time.sleep(4)
             self.scroll_to_load_reviews()
 
-            review_page = self.driver.page_source
-            review_html = bs(review_page, "html.parser")
+            page_html = self.driver.page_source
+            soup = bs(page_html, "html.parser")
 
+            # --- Global star counts ---
             global_counts = {"5": "0", "4": "0", "3": "0", "2": "0", "1": "0"}
             try:
-                count_nodes = review_html.find_all(class_=re.compile("countNode", re.IGNORECASE))
-                if count_nodes and len(count_nodes) >= 5:
-                    def get_text(node): return node.text.strip() if hasattr(node, 'text') else str(node)
-                    global_counts["5"] = get_text(count_nodes[0])
-                    global_counts["4"] = get_text(count_nodes[1])
-                    global_counts["3"] = get_text(count_nodes[2])
-                    global_counts["2"] = get_text(count_nodes[3])
-                    global_counts["1"] = get_text(count_nodes[4])
+                # Ajio shows star breakdown in elements like "5 star", "4 star" etc.
+                star_rows = soup.find_all(attrs={"class": re.compile(r"star.*bar|rating.*bar|bar.*rating", re.IGNORECASE)})
+                if not star_rows:
+                    star_rows = soup.find_all("div", {"class": re.compile(r"ratingStar|ratingBar", re.IGNORECASE)})
+                for idx, row in enumerate(star_rows[:5]):
+                    count_text = row.get_text(strip=True)
+                    nums = re.findall(r"\d+", count_text)
+                    star_num = str(5 - idx)
+                    if nums:
+                        global_counts[star_num] = nums[-1]
             except Exception as e:
-                print(f"--- DEBUG: Global ratings extract failed: {e} ---")
+                print(f"--- DEBUG: Star count extraction failed: {e} ---")
 
-            review_container = review_html.find("div", class_=re.compile("userReviewsContainer", re.IGNORECASE))
-            if not review_container:
+            # --- Individual reviews ---
+            # Ajio review containers
+            review_containers = soup.find_all(
+                attrs={"class": re.compile(r"review.*item|user.*review|prod.*review|reviewCard|review-card", re.IGNORECASE)}
+            )
+            if not review_containers:
+                review_containers = soup.find_all("div", {"class": re.compile(r"review", re.IGNORECASE)})
+
+            print(f"--- DEBUG: Found {len(review_containers)} review containers ---")
+
+            if not review_containers:
                 return pd.DataFrame()
-
-            user_rating = review_container.find_all("div", class_=re.compile("showRating", re.IGNORECASE))
-            user_comment = review_container.find_all("div", class_=re.compile("reviewTextWrapper", re.IGNORECASE))
-            user_name = review_container.find_all("div", class_=re.compile("user-review-left", re.IGNORECASE))
 
             reviews = []
             pos_count = 0
             neg_count = 0
-            total_elements = min(len(user_rating), len(user_comment), len(user_name))
 
-            for i in range(total_elements):
+            for container in review_containers:
                 if pos_count >= 7 and neg_count >= 5:
                     break
 
+                # Rating
                 try:
-                    rating_span = user_rating[i].find("span", class_=re.compile("starRating", re.IGNORECASE))
-                    rating_str = rating_span.get_text().strip() if rating_span else str(self.product_rating_value)
+                    rating_elem = container.find(attrs={"class": re.compile(r"rating|star|score", re.IGNORECASE)})
+                    rating_text = rating_elem.get_text(strip=True) if rating_elem else self.product_rating_value
+                    match = re.search(r"(\d+\.?\d*)", rating_text)
+                    rating_str = match.group(1) if match else self.product_rating_value
                     rating_val = float(rating_str)
                 except Exception:
-                    rating_str = str(self.product_rating_value) or "0"
-                    rating_val = float(rating_str)
+                    rating_str = self.product_rating_value
+                    rating_val = float(rating_str) if rating_str else 0.0
 
                 is_positive = rating_val >= 4.0
                 is_negative = rating_val <= 3.0
@@ -208,36 +244,43 @@ class ScrapeReviews:
                 if is_negative and neg_count >= 5:
                     continue
 
+                # Comment
                 try:
-                    comment = user_comment[i].text.strip()
+                    comment_elem = container.find(attrs={"class": re.compile(r"comment|text|body|content|description", re.IGNORECASE)})
+                    comment = comment_elem.get_text(strip=True) if comment_elem else container.get_text(strip=True)
+                    comment = comment[:500] if comment else "No comment given"
                 except Exception:
-                    comment = "No comment Given"
+                    comment = "No comment given"
 
+                # Reviewer name
                 try:
-                    name_span = user_name[i].find("span")
-                    name = name_span.text.strip() if name_span else "Verified Buyer"
+                    name_elem = container.find(attrs={"class": re.compile(r"name|user|author|reviewer", re.IGNORECASE)})
+                    name = name_elem.get_text(strip=True) if name_elem else "Verified Buyer"
                 except Exception:
                     name = "Verified Buyer"
 
+                # Date
                 try:
-                    spans = user_name[i].find_all("span")
-                    date = spans[1].text.strip() if len(spans) > 1 else "Recent"
+                    date_elem = container.find(attrs={"class": re.compile(r"date|time|posted|when", re.IGNORECASE)})
+                    if not date_elem:
+                        date_elem = container.find("time")
+                    date = date_elem.get_text(strip=True) if date_elem else "Recent"
                 except Exception:
                     date = "Recent"
 
                 mydict = {
-                    "Product Name": self.product_title,
+                    "Product Name":  self.product_title,
                     "Over_All_Rating": self.product_rating_value,
-                    "Price": self.product_price,
-                    "Date": date,
-                    "Rating": rating_str,
-                    "Name": name,
-                    "Comment": comment,
-                    "Total_5_Star": global_counts["5"],
-                    "Total_4_Star": global_counts["4"],
-                    "Total_3_Star": global_counts["3"],
-                    "Total_2_Star": global_counts["2"],
-                    "Total_1_Star": global_counts["1"],
+                    "Price":         self.product_price,
+                    "Date":          date,
+                    "Rating":        rating_str,
+                    "Name":          name,
+                    "Comment":       comment,
+                    "Total_5_Star":  global_counts["5"],
+                    "Total_4_Star":  global_counts["4"],
+                    "Total_3_Star":  global_counts["3"],
+                    "Total_2_Star":  global_counts["2"],
+                    "Total_1_Star":  global_counts["1"],
                 }
                 reviews.append(mydict)
 
@@ -259,7 +302,7 @@ class ScrapeReviews:
     def get_review_data(self) -> pd.DataFrame:
         try:
             product_urls = self.scrape_product_urls(product_name=self.product_name) or []
-            print(f"--- DEBUG: Found {len(product_urls)} product URLs on search page ---")
+            print(f"--- DEBUG: Found {len(product_urls)} product URLs ---")
 
             if not product_urls:
                 self.driver.quit()
@@ -269,23 +312,30 @@ class ScrapeReviews:
             for url in product_urls:
                 if len(product_details) >= self.no_of_products:
                     break
-                print(f"--- DEBUG: Checking product: {url} ---")
-                review = self.extract_reviews(url)
-                if review:
-                    product_detail = self.extract_products(review)
+
+                print(f"--- DEBUG: Processing: {url} ---")
+                product_link = self.extract_reviews(url)
+
+                if product_link:
+                    product_detail = self.extract_products(product_link)
                     if not product_detail.empty:
                         product_details.append(product_detail)
                         print(f"--- DEBUG: Collected {len(product_details)} / {self.no_of_products} ---")
+                    else:
+                        print("--- DEBUG: No reviews on this product, skipping ---")
+                else:
+                    print("--- DEBUG: Could not load product page, skipping ---")
 
             self.driver.quit()
 
             if product_details:
-                data = pd.concat(product_details, axis=0)
-                unique_products = data['Product Name'].unique()
+                data = pd.concat(product_details, axis=0, ignore_index=True)
+                unique_products = data["Product Name"].unique()
                 index_mapping = {name: i + 1 for i, name in enumerate(unique_products)}
-                data.insert(0, 'Product Index', data['Product Name'].map(index_mapping))
+                data.insert(0, "Product Index", data["Product Name"].map(index_mapping))
                 data.to_csv("data.csv", index=False)
                 return data
+
             return pd.DataFrame()
 
         except Exception as e:
