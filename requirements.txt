@@ -1,0 +1,14 @@
+pandas==2.0.3
+numpy==1.26.4
+bs4
+chromedriver-binary
+pymongo    
+gunicorn
+plotly
+pysocks
+python-dotenv
+selenium
+streamlit
+tiktoken
+certifi
+-e .            
