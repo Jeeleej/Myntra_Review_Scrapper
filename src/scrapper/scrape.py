@@ -4,7 +4,8 @@ from src.exception import CustomException
 from bs4 import BeautifulSoup as bs
 import re
 import pandas as pd
-import os, sys
+import os
+import sys
 import time
 from urllib.parse import urljoin
 from selenium.webdriver.chrome.options import Options
@@ -13,8 +14,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import quote
 
-from packaging import version
-sys.modules['distutils.version'] = version
+import setuptools
+sys.modules['distutils'] = setuptools._distutils
+sys.modules['distutils.version'] = setuptools._distutils.version
 
 import undetected_chromedriver as uc
 import time
