@@ -12,11 +12,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import quote
-import sys
-import setuptools
 
-sys.modules['distutils'] = setuptools._distutils
-sys.modules['distutils.version'] = setuptools._distutils.version
+from packaging import version
+sys.modules['distutils.version'] = version
 
 import undetected_chromedriver as uc
 import time
