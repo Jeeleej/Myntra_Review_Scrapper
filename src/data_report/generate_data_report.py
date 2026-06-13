@@ -177,7 +177,7 @@ class DashboardGenerator:
                 )
                 
                 product_data['Numeric_Rating'] = pd.to_numeric(product_data['Rating'], errors='coerce')
-                product_data['Clean_Date'] = pd.to_datetime(product_data['Date'], errors='coerce')
+                product_data['Clean_Date'] = pd.to_datetime(product_data['Date'], format='%d-%m-%Y', errors='coerce')
 
                 if sort_option == "Date (Newest First)":
                     product_data = product_data.sort_values(

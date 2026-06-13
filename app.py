@@ -11,16 +11,6 @@ st.set_page_config(
     layout="wide"
 )
 
-seo_schema = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Myntra Market Insights",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web",
-    "description": "A live web scraper and sentiment analysis dashboard for tracking Myntra product reviews, pricing, and customer feedback."
-}
-st.markdown(f'<script type="application/ld+json">{json.dumps(seo_schema)}</script>', unsafe_allow_html=True)
-
 st.title("Myntra Review Scrapper")
 
 if "data" not in st.session_state:
@@ -42,7 +32,7 @@ SORT_OPTIONS = {
 
 def form_input():
     product = st.text_input("Search Products", value=st.session_state[SESSION_PRODUCT_KEY])
-    no_of_products = st.number_input("No of products to search", step=1, min_value=1, max_value=8, value=4)
+    no_of_products = st.number_input("No of products to search", step=1, min_value=1, max_value=8)
     sort_choice = st.selectbox("Sort by", options=list(SORT_OPTIONS.keys()), key="sort_state")
     
     if st.button("Scrape Reviews"):

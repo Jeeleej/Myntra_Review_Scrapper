@@ -272,6 +272,9 @@ class ScrapeReviews:
         product_urls.pop(skip_index)
 
     def get_review_data(self) -> pd.DataFrame:
+        start_time = time.time()
+        print("--- DEBUG: Scraping process initiated ---")
+        
         try:
             product_urls = self.scrape_product_urls(product_name=self.product_name)
             
@@ -323,4 +326,13 @@ class ScrapeReviews:
             except:
                 pass
             raise CustomException(e, sys)
+        finally:
+            if hasattr(self, 'driver'):
+                self.driver.quit()
+                
+            end_time = time.time()
+            total_time = end_time - start_time
+            minutes = int(total_time // 60)
+            seconds = int(total_time % 60)
+            print(f"--- DEBUG: Total fetching time: {minutes}m {seconds}s ---")
         

@@ -3,6 +3,14 @@ import streamlit as st
 from src.constants import SESSION_PRODUCT_KEY
 from src.data_report.generate_data_report import DashboardGenerator
 
+st.set_page_config(
+    page_title="Myntra Market Insights | Live Product Review Scraper",
+    page_icon="logo.jpg",
+    layout="wide"
+)
+
+st.title("Myntra Review Scrapper")
+
 def create_analysis_page(review_data: pd.DataFrame):
     if review_data is not None and not review_data.empty:
         st.success("Analysis Data Loaded Successfully!")
