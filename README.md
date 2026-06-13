@@ -14,6 +14,21 @@
 
 ---
 
+## 🎥 Demo Video
+
+[▶ Watch Demo](https://github.com/user-attachments/assets/896b0b5f-46a5-4ed7-bedb-760c43afafdf)
+
+The demo walks through:
+- Searching for a product keyword on Myntra
+- Configuring the number of products and sort order
+- Running the scraper and watching data load in real time
+- Exploring the analytics dashboard with interactive Plotly charts
+- Viewing the executive summary and raw CSV data
+
+<!-- Replace the link above with your actual demo video URL (YouTube, Loom, etc.) -->
+
+---
+
 ## ✨ Features
 
 - 🔍 **Product Search** — Search any product on Myntra by keyword
