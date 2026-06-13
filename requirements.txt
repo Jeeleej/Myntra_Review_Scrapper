@@ -10,5 +10,4 @@ python-dotenv
 selenium
 streamlit
 tiktoken
-certifi
--e .            
+certifi           

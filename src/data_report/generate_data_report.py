@@ -178,6 +178,34 @@ class DashboardGenerator:
                 
                 product_data['Numeric_Rating'] = pd.to_numeric(product_data['Rating'], errors='coerce')
                 product_data['Clean_Date'] = pd.to_datetime(product_data['Date'], errors='coerce')
+
+                if sort_option == "Date (Newest First)":
+                    product_data = product_data.sort_values(
+                        by='Clean_Date',
+                        ascending=False,
+                        na_position='last'
+                    )
+
+                elif sort_option == "Date (Oldest First)":
+                    product_data = product_data.sort_values(
+                        by='Clean_Date',
+                        ascending=True,
+                        na_position='last'
+                    )
+
+                elif sort_option == "Rating (High to Low)":
+                    product_data = product_data.sort_values(
+                        by='Numeric_Rating',
+                        ascending=False,
+                        na_position='last'
+                    )
+
+                elif sort_option == "Rating (Low to High)":
+                    product_data = product_data.sort_values(
+                        by='Numeric_Rating',
+                        ascending=True,
+                        na_position='last'
+                    )
                 
                 col1, col2 = st.columns(2)
                 with col1:

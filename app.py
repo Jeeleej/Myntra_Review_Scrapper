@@ -3,8 +3,24 @@ import streamlit as st
 from src.cloud_io import MongoIO
 from src.constants import SESSION_PRODUCT_KEY
 from src.scrapper.scrape import ScrapeReviews
+import json
 
-st.set_page_config(page_title="Myntra Review Scrapper")
+st.set_page_config(
+    page_title="Myntra Market Insights | Live Product Review Scraper",
+    page_icon="logo.jpg",
+    layout="wide"
+)
+
+seo_schema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Myntra Market Insights",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "A live web scraper and sentiment analysis dashboard for tracking Myntra product reviews, pricing, and customer feedback."
+}
+st.markdown(f'<script type="application/ld+json">{json.dumps(seo_schema)}</script>', unsafe_allow_html=True)
+
 st.title("Myntra Review Scrapper")
 
 if "data" not in st.session_state:
