@@ -67,13 +67,10 @@ Output: Review Sub-lists, Global Ratings, Executive Summary, Charts
 ## 🖼️ Screenshots
 
 ### Scraper UI
-Search for products, set quantity, and choose sort order before scraping.
-
-### Review Data
-View per-product review sub-lists with ratings, dates, and reviewer names.
+<img width="1917" height="976" alt="Image" src="https://github.com/user-attachments/assets/bba09e07-a3a3-4e56-ab38-5316243d2655" />
 
 ### Analysis Dashboard
-Executive summary and interactive charts generated from the scraped data.
+<img width="1902" height="975" alt="Image" src="https://github.com/user-attachments/assets/fbad77ab-5cbe-4a7d-a7e5-ac362ee0ee15" />
 
 ---
 
