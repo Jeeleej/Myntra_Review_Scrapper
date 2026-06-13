@@ -16,7 +16,7 @@
 
 ## 🎥 Demo Video
 
-[▶ Watch Demo](https://github.com/user-attachments/assets/896b0b5f-46a5-4ed7-bedb-760c43afafdf)
+[▶ Watch Demo](https://github.com/user-attachments/assets/90e02f63-dda3-485a-89fd-7718778d6c9f)
 
 The demo walks through:
 - Searching for a product keyword on Myntra
