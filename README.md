@@ -26,7 +26,7 @@
   - Price vs Rating scatter
   - Product leaderboard
 - 📋 **Executive Summary** — At-a-glance stats: total products, reviews analyzed, avg market price, and avg global rating
-- 🗃️ **Raw Data View** — Inspect all scraped data in its raw JSON form
+- 🗃️ **Data View** — Inspect all scraped data in CSV form
 
 ---
 
